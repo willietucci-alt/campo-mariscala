@@ -112,6 +112,12 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0ede6;min-height:1
 .ios-banner{background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:10px 14px;margin:8px;font-size:12px;color:#856404;display:none}
 .ios-banner b{display:block;margin-bottom:3px}
 </style>
+  <link rel="manifest" href="manifest.json"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="Campo"/>
+  <link rel="apple-touch-icon" href="icon-192.png"/>
+  <meta name="theme-color" content="#1a3a1a"/>
 </head>
 <body>
 <div class="app" id="mainApp">
@@ -445,6 +451,18 @@ function renderParcSelect(){
 renderParcSelect();
 cargarDatos();
 setInterval(cargarDatos,10000);
+</script>
+
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('sw.js').then(function(reg){
+      console.log('SW registrado');
+    }).catch(function(err){
+      console.log('SW error:', err);
+    });
+  });
+}
 </script>
 </body>
 </html>
