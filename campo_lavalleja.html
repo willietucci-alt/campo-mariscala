@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>Campo Lavalleja — Willy Tucci</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0ede6;min-height:100vh;color:#1a1a1a}
+.app{display:flex;flex-direction:column;min-height:100vh;min-height:-webkit-fill-available}
+.topbar{background:#1a3a1a;color:#fff;padding:9px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,0.3)}
+.app-title{font-size:15px;font-weight:700}
+.app-sub{font-size:11px;color:#9dbf9d;display:flex;align-items:center;gap:4px}
+.sdot{width:7px;height:7px;border-radius:50%;background:#4caf50;display:inline-block;transition:background 0.3s}
+.sdot.off{background:#f44336}.sdot.wait{background:#ff9800}
+.tright{display:flex;align-items:center;gap:7px}
+.usel{background:rgba(255,255,255,0.13);border:1px solid rgba(255,255,255,0.22);color:#fff;padding:5px 8px;border-radius:8px;font-size:12px;font-family:inherit}
+.bodywrap{display:flex;flex:1;min-height:0;flex-direction:column}
+@media(min-width:700px){.bodywrap{flex-direction:row}}
+.mapp{flex:1;padding:8px;display:flex;flex-direction:column;gap:6px;border-bottom:1px solid #d5cfc5;min-width:0}
+@media(min-width:700px){.mapp{border-bottom:none;border-right:1px solid #d5cfc5}}
+.ptitle{font-size:10px;color:#777;font-weight:700;letter-spacing:0.5px;text-transform:uppercase}
+
+/* MAPA con imagen de fondo */
+.mcanvas{
+  position:relative;
+  border:1px solid #c5bfb2;border-radius:10px;overflow:hidden;
+  flex:1;min-height:340px;
+  background-color:#e8e2d5;
+  background-image:url('plano_campo.jpg');
+  background-size:contain;
+  background-repeat:no-repeat;
+  background-position:center center;
+}
+/* Overlay semitransparente para que las parcelas se vean sobre el plano */
+.mcanvas::before{
+  content:'';position:absolute;inset:0;
+  background:rgba(255,255,255,0.18);
+  pointer-events:none;z-index:1;
+}
+@media(min-width:700px){.mcanvas{min-height:480px}}
+
+.parcela{position:absolute;border-radius:3px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:2px;border:1.5px solid rgba(80,140,80,0.7);background:rgba(200,230,180,0.45);transition:filter 0.15s;z-index:2}
+.parcela:hover,.parcela:active{filter:brightness(0.88);z-index:10}
+.parcela.dragover{border:2.5px solid #1a7a1a !important;background:rgba(100,200,100,0.55) !important}
+.parcela.haslote{background:rgba(80,180,80,0.55);border-color:rgba(30,120,30,0.9);border-width:2px}
+.pnum{font-size:8px;font-weight:700;color:#1a2a1a;line-height:1;pointer-events:none;text-shadow:0 0 3px rgba(255,255,255,0.9)}
+.pha{font-size:7px;color:#2a4a2a;line-height:1;pointer-events:none;text-shadow:0 0 3px rgba(255,255,255,0.9)}
+.ptag{font-size:7px;font-weight:700;color:#1a5c1a;background:rgba(255,255,255,0.92);border-radius:2px;padding:1px 2px;margin-top:1px;pointer-events:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:95%}
+.wdot{position:absolute;width:6px;height:6px;border-radius:50%;background:#3a8fc7;border:1px solid #1a5fa0;z-index:5;pointer-events:none;right:2px;top:2px}
+
+.lchip{position:absolute;background:rgba(255,255,255,0.95);border:1.5px solid #5a9a5a;border-radius:10px;padding:2px 5px;font-size:8px;font-weight:700;color:#1a5c1a;cursor:grab;z-index:20;white-space:nowrap;user-select:none;display:flex;align-items:center;gap:2px;box-shadow:0 1px 5px rgba(0,0,0,0.2);touch-action:none}
+.lchip:active{cursor:grabbing;box-shadow:0 3px 10px rgba(0,0,0,0.3)}
+.lchip.dragging{opacity:0.25}
+
+.legend{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.legi{display:flex;align-items:center;gap:4px;font-size:10px;color:#666}
+.legdot{width:8px;height:8px;border-radius:50%}
+
+/* SIDE PANEL */
+.side{flex-shrink:0;display:flex;flex-direction:column;background:#faf9f6;width:100%;max-height:280px}
+@media(min-width:700px){.side{width:215px;max-height:none}}
+.stabs{display:flex;border-bottom:1px solid #ddd;background:#f2f0eb}
+.stab{flex:1;padding:8px 4px;font-size:12px;color:#888;text-align:center;cursor:pointer;border:none;background:transparent;border-bottom:2px solid transparent;font-family:inherit;font-weight:500}
+.stab.on{color:#1a3a1a;border-bottom-color:#2a7a2a;font-weight:700}
+.sbody{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:9px;display:flex;flex-direction:column;gap:6px}
+.hcard{padding:8px 9px;border-radius:8px;border:1px solid #e0ddd6;background:#fff;display:flex;flex-direction:column;gap:3px}
+.hhead{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.hlote{font-size:12px;font-weight:700;color:#1a1a1a}
+.hcab{font-size:10px;color:#999}
+.hbadge{font-size:9px;padding:1px 6px;border-radius:8px;font-weight:700}
+.hmov{font-size:11px;color:#555;display:flex;align-items:center;gap:3px}
+.hts{font-size:10px;color:#aaa}
+.hnote{font-size:10px;color:#666;font-style:italic;padding-left:5px;border-left:2px solid #ddd;margin-top:1px}
+.hsnap{font-size:9px;color:#bbb;margin-top:1px}
+.empty{font-size:12px;color:#bbb;text-align:center;padding:24px 0}
+.izlabel{font-size:10px;font-weight:700;color:#3a7a3a;text-transform:uppercase;letter-spacing:0.4px;padding:3px 0 2px;border-bottom:1px solid #e8e5e0;margin-bottom:2px}
+.irow{font-size:11px;color:#333;padding:3px 0;display:flex;justify-content:space-between;border-bottom:1px solid #f0ede8}
+.irow span{font-size:10px;color:#aaa}
+
+/* BARRA AGREGAR */
+.addbar{padding:7px 10px;border-top:1px solid #d5cfc5;display:flex;align-items:center;gap:6px;background:#fff;flex-wrap:wrap}
+.addbar label{font-size:11px;color:#777;white-space:nowrap}
+.addbar input[type=text]{font-size:12px;padding:5px 8px;border:1px solid #ccc;border-radius:7px;background:#fafafa;font-family:inherit;color:#1a1a1a;width:90px}
+.addbar input[type=number]{font-size:12px;padding:5px 6px;width:54px;border:1px solid #ccc;border-radius:7px;background:#fafafa;font-family:inherit;color:#1a1a1a}
+.addbar select{font-size:11px;padding:5px 5px;border:1px solid #ccc;border-radius:7px;background:#fafafa;color:#1a1a1a;font-family:inherit}
+.btnadd{padding:5px 12px;font-size:12px;font-weight:700;background:#2a6a2a;color:#fff;border:none;border-radius:7px;cursor:pointer;white-space:nowrap;-webkit-appearance:none}
+.btnadd:disabled{background:#aaa}
+
+/* MODAL */
+.mbg{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:500;padding:16px;-webkit-backdrop-filter:blur(2px)}
+.modal{background:#fff;border-radius:14px;padding:18px;width:100%;max-width:300px;display:flex;flex-direction:column;gap:10px;box-shadow:0 8px 40px rgba(0,0,0,0.3)}
+.modal h3{font-size:14px;font-weight:700;color:#1a3a1a}
+.modal p{font-size:12px;color:#555;line-height:1.5}
+.modal textarea{width:100%;resize:none;height:64px;font-size:12px;border:1.5px solid #ddd;border-radius:8px;padding:6px 8px;font-family:inherit;background:#fafafa;-webkit-appearance:none}
+.modal textarea:focus{outline:none;border-color:#4a8a4a}
+.mbtns{display:flex;gap:8px}
+.btnok{flex:1;padding:10px;font-size:13px;font-weight:700;background:#2a6a2a;color:#fff;border:none;border-radius:8px;cursor:pointer;-webkit-appearance:none}
+.btnok:disabled{background:#aaa}
+.btncan{padding:10px 12px;font-size:12px;background:transparent;border:1.5px solid #ddd;border-radius:8px;cursor:pointer;color:#666;font-family:inherit;-webkit-appearance:none}
+
+/* INSTRUCCIÓN CELULAR */
+.mobile-hint{display:none;position:absolute;bottom:8px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.65);color:#fff;font-size:10px;padding:4px 10px;border-radius:10px;white-space:nowrap;z-index:30;pointer-events:none}
+@media(max-width:699px){.mobile-hint{display:block}}
+
+.spinner{display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a3a1a;color:#fff;padding:10px 18px;border-radius:10px;font-size:13px;z-index:999;opacity:0;transition:opacity 0.3s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1}
+
+/* Aviso iPhone */
+.ios-banner{background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:10px 14px;margin:8px;font-size:12px;color:#856404;display:none}
+.ios-banner b{display:block;margin-bottom:3px}
+</style>
+</head>
+<body>
+<div class="app" id="mainApp">
+  <!-- Banner solo para iPhone/Safari cuando viene de WhatsApp -->
+  <div class="ios-banner" id="iosBanner">
+    <b>📱 Para que funcione en iPhone:</b>
+    Tocá los tres puntos (···) arriba a la derecha → "Abrir en Safari". Solo hay que hacerlo una vez.
+  </div>
+
+  <div class="topbar">
+    <div>
+      <div class="app-title">🌾 Campo Lavalleja</div>
+      <div class="app-sub"><span class="sdot wait" id="sdot"></span><span id="stext">Conectando...</span></div>
+    </div>
+    <div class="tright">
+      <select id="userSel" class="usel">
+        <option>Willy</option><option>Capataz</option><option>Peón 1</option><option>Peón 2</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="bodywrap">
+    <div class="mapp">
+      <div class="ptitle">Plano — 40 parcelas</div>
+      <div class="mcanvas" id="mcanvas">
+        <div class="mobile-hint">Tocá una parcela destino para mover hacienda</div>
+      </div>
+      <div class="legend">
+        <div class="legi"><div class="legdot" style="background:rgba(200,230,180,0.8);border:1px solid #9ab87a"></div>Libre</div>
+        <div class="legi"><div class="legdot" style="background:rgba(80,180,80,0.8);border:1.5px solid #3a8a3a"></div>Con hacienda</div>
+        <div class="legi"><div class="legdot" style="background:#3a8fc7"></div>Bebedero</div>
+      </div>
+    </div>
+    <div class="side">
+      <div class="stabs">
+        <button class="stab on" onclick="showTab('hist')" id="tab-hist">Historial</button>
+        <button class="stab" onclick="showTab('inv')" id="tab-inv">Inventario</button>
+      </div>
+      <div class="sbody" id="sbody"></div>
+    </div>
+  </div>
+
+  <div class="addbar">
+    <label>Nuevo lote:</label>
+    <input type="text" id="loteName" placeholder="Nombre" maxlength="18"/>
+    <input type="number" id="loteHead" placeholder="cab." min="1" max="9999" inputmode="numeric"/>
+    <select id="loteParc"></select>
+    <button class="btnadd" id="btnAdd" onclick="addLote()">+ Agregar</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════
+// FIREBASE URL — Campo Lavalleja, Willy Tucci
+// ══════════════════════════════════════════════════
+const FB_URL = 'https://campo-lavalleja-default-rtdb.firebaseio.com';
+
+// ── DETECCIÓN iOS en WhatsApp ──────────────────────
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+const inWhatsApp = /WhatsApp/.test(navigator.userAgent);
+if (isIOS && inWhatsApp) {
+  document.getElementById('iosBanner').style.display = 'block';
+}
+
+// ── PARCELAS ──────────────────────────────────────
+const PARC=[
+  {id:1,ha:3.2,x:79,y:77,w:5.5,h:5,water:true},
+  {id:2,ha:3.5,x:74,y:80,w:5.5,h:5.5,water:false},
+  {id:3,ha:2.8,x:80,y:67,w:6,h:7,water:false},
+  {id:4,ha:3.5,x:84,y:54,w:6,h:8,water:false},
+  {id:5,ha:3.1,x:82,y:43,w:7,h:7,water:true},
+  {id:6,ha:3.5,x:80,y:30,w:7,h:7,water:false},
+  {id:7,ha:3.5,x:75,y:20,w:8,h:8,water:false},
+  {id:8,ha:3.5,x:62,y:15,w:8,h:7,water:false},
+  {id:9,ha:3.9,x:64,y:34,w:8,h:8,water:true},
+  {id:10,ha:3.4,x:62,y:44,w:8,h:7,water:false},
+  {id:11,ha:4.0,x:64,y:53,w:8,h:7,water:false},
+  {id:12,ha:3.6,x:62,y:60,w:8,h:7,water:false},
+  {id:13,ha:2.9,x:60,y:68,w:8,h:6,water:false},
+  {id:14,ha:2.3,x:60,y:76,w:8,h:5.5,water:false},
+  {id:15,ha:2.2,x:52,y:68,w:7,h:6,water:true},
+  {id:16,ha:2.7,x:50,y:60,w:8,h:7,water:false},
+  {id:17,ha:3.7,x:48,y:52,w:8,h:7,water:false},
+  {id:18,ha:4.0,x:50,y:44,w:8,h:7,water:false},
+  {id:19,ha:4.6,x:48,y:34,w:9,h:8,water:true},
+  {id:20,ha:3.1,x:52,y:22,w:8,h:7,water:false},
+  {id:21,ha:3.2,x:38,y:6,w:10,h:7,water:false},
+  {id:22,ha:3.1,x:50,y:13,w:9,h:7,water:false},
+  {id:23,ha:3.2,x:36,y:18,w:9,h:8,water:false},
+  {id:24,ha:2.7,x:28,y:25,w:8,h:7,water:false},
+  {id:25,ha:2.5,x:24,y:32,w:8,h:6,water:false},
+  {id:26,ha:2.1,x:18,y:37,w:7,h:6,water:false},
+  {id:27,ha:3.1,x:16,y:44,w:8,h:7,water:true},
+  {id:28,ha:3.1,x:12,y:52,w:8,h:8,water:false},
+  {id:29,ha:3.4,x:26,y:42,w:9,h:8,water:false},
+  {id:30,ha:3.7,x:24,y:52,w:9,h:8,water:false},
+  {id:31,ha:3.5,x:28,y:62,w:8,h:8,water:false},
+  {id:32,ha:3.9,x:22,y:71,w:9,h:8,water:false},
+  {id:33,ha:2.6,x:38,y:68,w:8,h:6,water:false},
+  {id:34,ha:3.7,x:38,y:76,w:8,h:6.5,water:true},
+  {id:35,ha:2.6,x:28,y:80,w:8,h:5.5,water:false},
+  {id:36,ha:2.4,x:32,y:87,w:8,h:5.5,water:true},
+  {id:37,ha:3.3,x:44,y:86,w:8,h:6,water:false},
+  {id:38,ha:3.2,x:56,y:86,w:8,h:6,water:false},
+  {id:39,ha:2.6,x:70,y:88,w:7,h:5.5,water:true},
+  {id:40,ha:4.6,x:78,y:92,w:8,h:5,water:false},
+];
+
+const UCOL={
+  'Willy':{bg:'#e8f5e9',c:'#1b5e20'},
+  'Capataz':{bg:'#e3f2fd',c:'#0d47a1'},
+  'Peón 1':{bg:'#fff3e0',c:'#e65100'},
+  'Peón 2':{bg:'#f3e5f5',c:'#6a1b9a'},
+  '_':{bg:'#f1f8e9',c:'#33691e'}
+};
+
+let lotes={}, historial=[], curTab='hist', dragLote=null, pending=null, touchMoveLote=null;
+
+// ── FIREBASE REST ─────────────────────────────────
+async function fbGet(p){const r=await fetch(`${FB_URL}/${p}.json`,{mode:'cors'});if(!r.ok)throw new Error(r.status);return r.json();}
+async function fbPost(p,d){const r=await fetch(`${FB_URL}/${p}.json`,{method:'POST',body:JSON.stringify(d),headers:{'Content-Type':'application/json'},mode:'cors'});if(!r.ok)throw new Error(r.status);return r.json();}
+async function fbPatch(p,d){const r=await fetch(`${FB_URL}/${p}.json`,{method:'PATCH',body:JSON.stringify(d),headers:{'Content-Type':'application/json'},mode:'cors'});if(!r.ok)throw new Error(r.status);return r.json();}
+
+function setStatus(ok,msg){
+  document.getElementById('sdot').className='sdot'+(ok===true?'':ok===false?' off':' wait');
+  document.getElementById('stext').textContent=msg;
+}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+
+async function cargarDatos(){
+  try{
+    const[l,h]=await Promise.all([fbGet('lotes'),fbGet('historial')]);
+    lotes=l||{};
+    const arr=h?Object.values(h):[];
+    arr.sort((a,b)=>b.ts-a.ts);
+    historial=arr.slice(0,100);
+    render();
+    const now=new Date().toLocaleTimeString('es-UY',{hour:'2-digit',minute:'2-digit'});
+    setStatus(true,'Conectado · '+now);
+  }catch(e){setStatus(false,'Sin conexión — reintentando...');}
+}
+
+// ── HELPERS ───────────────────────────────────────
+function gp(id){return PARC.find(p=>p.id===id);}
+function getUser(){return document.getElementById('userSel').value;}
+function lotesEnParcela(pid){return Object.values(lotes).filter(l=>l.parcelaId===pid);}
+function snapParcela(pid){const ls=lotesEnParcela(pid);return ls.length?ls.map(l=>l.nombre+' '+l.cabezas+'cab').join(', '):'(vacía)';}
+function fmtDate(ts){const d=new Date(ts);return d.toLocaleDateString('es-UY',{day:'2-digit',month:'2-digit',year:'2-digit'})+' '+d.toLocaleTimeString('es-UY',{hour:'2-digit',minute:'2-digit'});}
+
+// ── RENDER ────────────────────────────────────────
+function render(){renderMap();renderSide();}
+
+function renderMap(){
+  const cv=document.getElementById('mcanvas');
+  // Limpiar excepto hint y overlay
+  [...cv.children].forEach(c=>{if(!c.classList.contains('mobile-hint')&&!c.classList.contains('mcanvas-overlay'))c.remove();});
+
+  PARC.forEach(p=>{
+    const ls=lotesEnParcela(p.id);
+    const has=ls.length>0;
+    const div=document.createElement('div');
+    div.className='parcela'+(has?' haslote':'');
+    div.dataset.pid=p.id;
+    div.style.cssText=`left:${p.x}%;top:${p.y}%;width:${p.w}%;height:${p.h}%;`;
+    div.innerHTML=`<div class="pnum">${p.id}</div><div class="pha">${p.ha}ha</div>`;
+    if(has)ls.forEach(l=>{const t=document.createElement('div');t.className='ptag';t.textContent=l.nombre+' ('+l.cabezas+')';div.appendChild(t);});
+    if(p.water){const w=document.createElement('div');w.className='wdot';div.appendChild(w);}
+
+    // Drag (desktop)
+    div.addEventListener('dragover',e=>{e.preventDefault();div.classList.add('dragover');});
+    div.addEventListener('dragleave',()=>div.classList.remove('dragover'));
+    div.addEventListener('drop',e=>{
+      e.preventDefault();div.classList.remove('dragover');
+      if(!dragLote||dragLote.parcelaId===p.id)return;
+      showModal(dragLote,p.id);
+    });
+
+    // Touch (celular) — tocar parcela destino cuando hay lote seleccionado
+    div.addEventListener('touchend',e=>{
+      if(touchMoveLote && touchMoveLote.parcelaId!==p.id){
+        e.preventDefault();
+        showModal(touchMoveLote,p.id);
+        touchMoveLote=null;
+        document.querySelectorAll('.parcela').forEach(x=>x.style.outline='');
+      }
+    });
+    cv.appendChild(div);
+  });
+
+  // Chips de lotes
+  Object.values(lotes).forEach(l=>{
+    const p=gp(l.parcelaId);if(!p)return;
+    const chip=document.createElement('div');
+    chip.className='lchip';chip.draggable=true;
+    chip.style.cssText=`left:${p.x+0.3}%;top:${p.y+p.h-3.6}%;`;
+    chip.innerHTML=`🐄 ${l.nombre} <span style="color:#6a9a6a;font-size:7px">${l.cabezas}cab</span>`;
+
+    // Desktop drag
+    chip.addEventListener('dragstart',e=>{dragLote=l;chip.classList.add('dragging');e.dataTransfer.effectAllowed='move';});
+    chip.addEventListener('dragend',()=>{chip.classList.remove('dragging');dragLote=null;});
+
+    // Touch: primer toque selecciona, segundo toque en parcela mueve
+    chip.addEventListener('touchstart',e=>{
+      e.stopPropagation();
+      if(touchMoveLote && touchMoveLote.id===l.id){
+        // Deseleccionar
+        touchMoveLote=null;
+        chip.style.border='1.5px solid #5a9a5a';
+        document.querySelectorAll('.parcela').forEach(x=>x.style.outline='');
+      } else {
+        touchMoveLote=l;
+        // Resaltar chip seleccionado
+        document.querySelectorAll('.lchip').forEach(x=>x.style.border='1.5px solid #5a9a5a');
+        chip.style.border='2px solid #e65100';
+        // Resaltar parcelas disponibles
+        document.querySelectorAll('.parcela').forEach(x=>{
+          x.style.outline=x.dataset.pid!=l.parcelaId?'2px dashed rgba(30,120,30,0.6)':'none';
+        });
+      }
+    },{passive:true});
+
+    cv.appendChild(chip);
+  });
+}
+
+// ── MODAL ─────────────────────────────────────────
+function showModal(lote,toPid){
+  const fromP=gp(lote.parcelaId),toP=gp(toPid);
+  pending={lote,toPid};
+  // Reset visual
+  document.querySelectorAll('.lchip').forEach(x=>x.style.border='1.5px solid #5a9a5a');
+  document.querySelectorAll('.parcela').forEach(x=>x.style.outline='');
+
+  const bg=document.createElement('div');bg.className='mbg';bg.id='moverlay';
+  bg.innerHTML=`<div class="modal">
+    <h3>🐄 Mover hacienda</h3>
+    <p><strong>${lote.nombre}</strong> — ${lote.cabezas} cabezas</p>
+    <p style="display:flex;align-items:center;gap:6px;font-size:13px;margin-top:2px">
+      <span style="font-weight:700;color:#3a7a3a">Parcela ${fromP.id}</span>
+      <span>→</span>
+      <span style="font-weight:700;color:#1a5c9a">Parcela ${toP.id} · ${toP.ha}ha${toP.water?' 💧':''}</span>
+    </p>
+    <p style="font-size:10px;color:#aaa;margin-top:-4px">Estado actual P${toP.id}: ${snapParcela(toPid)}</p>
+    <textarea id="mnote" placeholder="Nota: estado sanitario, condición del pasto, motivo..."></textarea>
+    <div class="mbtns">
+      <button class="btncan" onclick="closeModal()">Cancelar</button>
+      <button class="btnok" id="btnok" onclick="confirmMove()">Confirmar</button>
+    </div>
+  </div>`;
+  document.body.appendChild(bg);
+  setTimeout(()=>{const t=document.getElementById('mnote');if(t)t.focus();},40);
+}
+function closeModal(){const o=document.getElementById('moverlay');if(o)o.remove();pending=null;}
+
+async function confirmMove(){
+  if(!pending)return;
+  const{lote,toPid}=pending;
+  const note=(document.getElementById('mnote')||{}).value||'';
+  const fromSnap=snapParcela(lote.parcelaId);
+  const btn=document.getElementById('btnok');
+  btn.disabled=true;btn.innerHTML='<span class="spinner"></span>';
+  try{
+    await fbPatch('lotes/'+lote.id,{parcelaId:toPid});
+    await fbPost('historial',{loteId:lote.id,loteNombre:lote.nombre,cabezas:lote.cabezas,fromParcela:lote.parcelaId,toParcela:toPid,user:getUser(),ts:Date.now(),note:note.trim(),fromSnap});
+    closeModal();toast('✓ Movimiento guardado');await cargarDatos();
+  }catch(e){btn.disabled=false;btn.textContent='Confirmar';alert('Error al guardar. Revisá la conexión.\n'+e.message);}
+}
+
+async function addLote(){
+  const nom=document.getElementById('loteName').value.trim();
+  const cab=parseInt(document.getElementById('loteHead').value)||0;
+  const pid=parseInt(document.getElementById('loteParc').value);
+  if(!nom||cab<=0||!pid)return;
+  const btn=document.getElementById('btnAdd');
+  btn.disabled=true;btn.innerHTML='<span class="spinner"></span>';
+  try{
+    const r=await fbPost('lotes',{nombre:nom,cabezas:cab,parcelaId:pid});
+    await fbPatch('lotes/'+r.name,{id:r.name});
+    await fbPost('historial',{loteId:r.name,loteNombre:nom,cabezas:cab,fromParcela:null,toParcela:pid,user:getUser(),ts:Date.now(),note:'Lote ingresado'});
+    document.getElementById('loteName').value='';document.getElementById('loteHead').value='';
+    toast('✓ Lote agregado');await cargarDatos();
+  }catch(e){alert('Error al guardar.\n'+e.message);}
+  btn.disabled=false;btn.textContent='+ Agregar';
+}
+
+// ── TABS ──────────────────────────────────────────
+function showTab(t){curTab=t;document.querySelectorAll('.stab').forEach(s=>s.classList.remove('on'));document.getElementById('tab-'+t).classList.add('on');renderSide();}
+function renderSide(){const el=document.getElementById('sbody');curTab==='hist'?renderHist(el):renderInv(el);}
+
+function renderHist(el){
+  if(!historial.length){el.innerHTML='<div class="empty">Sin movimientos aún</div>';return;}
+  el.innerHTML='';
+  historial.forEach(h=>{
+    const uc=UCOL[h.user]||UCOL['_'];
+    const fp=h.fromParcela?gp(h.fromParcela):null;
+    const tp=gp(h.toParcela);if(!tp)return;
+    const c=document.createElement('div');c.className='hcard';
+    c.innerHTML=`<div class="hhead"><span class="hlote">${h.loteNombre}</span><span class="hcab">${h.cabezas}cab</span><span class="hbadge" style="background:${uc.bg};color:${uc.c}">${h.user}</span></div>
+    <div class="hmov">${fp?`<span style="font-weight:700;color:#3a7a3a">P${fp.id}</span><span>→</span>`:'<span style="color:#bbb;font-size:10px">ingreso→</span>'}<span style="font-weight:700;color:#1a5c9a">P${tp.id}</span><span style="font-size:10px;color:#aaa">${tp.ha}ha${tp.water?' 💧':''}</span></div>
+    ${h.note?`<div class="hnote">${h.note}</div>`:''}
+    ${h.fromSnap&&h.fromParcela?`<div class="hsnap">Antes P${h.fromParcela}: ${h.fromSnap}</div>`:''}
+    <div class="hts">${fmtDate(h.ts)}</div>`;
+    el.appendChild(c);
+  });
+}
+function renderInv(el){
+  el.innerHTML='';
+  const ocu=PARC.filter(p=>lotesEnParcela(p.id).length>0);
+  const lib=PARC.filter(p=>!lotesEnParcela(p.id).length);
+  if(ocu.length){
+    const s=document.createElement('div');
+    const l=document.createElement('div');l.className='izlabel';l.textContent='Con hacienda ('+ocu.length+')';s.appendChild(l);
+    ocu.forEach(p=>lotesEnParcela(p.id).forEach(lo=>{
+      const mv=historial.filter(h=>h.loteId===lo.id).length;
+      const r=document.createElement('div');r.className='irow';
+      r.innerHTML=`<span>P${p.id} — ${lo.nombre}</span><span>${lo.cabezas}cab · ${mv}mov</span>`;s.appendChild(r);
+    }));
+    el.appendChild(s);
+  }
+  const s2=document.createElement('div');
+  const l2=document.createElement('div');l2.className='izlabel';l2.style.color='#ccc';l2.textContent='Libres ('+lib.length+')';s2.appendChild(l2);
+  lib.forEach(p=>{const r=document.createElement('div');r.className='irow';r.innerHTML=`<span style="color:#bbb">P${p.id} — ${p.ha}ha${p.water?' 💧':''}</span><span>libre</span>`;s2.appendChild(r);});
+  el.appendChild(s2);
+}
+function renderParcSelect(){
+  const s=document.getElementById('loteParc');if(!s)return;
+  s.innerHTML=PARC.map(p=>`<option value="${p.id}">P${p.id} (${p.ha}ha${p.water?' 💧':''})</option>`).join('');
+}
+
+renderParcSelect();
+cargarDatos();
+setInterval(cargarDatos,10000);
+</script>
+</body>
+</html>
